@@ -105,8 +105,39 @@ void draw_compass_UI(void){
   // Draw angle symbol
   gfx_drawCircle(150, 290, 2, LCD_GREEN);
   
+}
+
+void draw_cardinal_points(int north_deg_value){
+  int north_deg = north_deg_value; 
+  int south_deg = north_deg + 180;
+  int east_deg = north_deg - 90;
+  int west_deg = north_deg + 90;
+
+  gfx_drawChar(120 + (cos(degrees_to_radians(north_deg)) * 100),
+              160 - (sin(degrees_to_radians(north_deg)) * 100), 78, LCD_GREEN, LCD_WHITE, 2);
+
+  // South
+  gfx_drawChar(120 + (cos(degrees_to_radians(south_deg)) * 100),
+               160 - (sin(degrees_to_radians(south_deg)) * 100), 83, LCD_BLACK, LCD_WHITE, 2);
+
+  // East
+  gfx_drawChar(120 + (cos(degrees_to_radians(east_deg)) * 100),
+              160 - (sin(degrees_to_radians(east_deg)) * 100), 69, LCD_BLACK, LCD_WHITE, 2);
+
+  // West
+  gfx_drawChar(120 + (cos(degrees_to_radians(west_deg)) * 100),
+               160 - (sin(degrees_to_radians(west_deg)) * 100), 87, LCD_BLACK, LCD_WHITE, 2);
+
+  // Drawing angle
+  gfx_setCursor(95, 290);
+  gfx_setTextColor(LCD_GREEN, LCD_WHITE);
+  char buffer[16];
+  snprintf(buffer, sizeof(buffer), "%03d", north_deg);
+  gfx_puts(buffer);
+
 
 }
+
 
 void clock_setup(void) {
   const uint32_t one_milisecond_rate = 168000;
@@ -136,47 +167,26 @@ int main(void) {
   //msleep(SLEEP_TIME);
   
   // original cardinal point degrees
-  int north_deg = 90; 
-  int south_deg = 270;
-  int east_deg = 0;
-  int west_deg = 180;
+  //int north_deg = 90; 
+  //int south_deg = 270;
+  //int east_deg = 0;
+  //int west_deg = 180;
 
   gfx_setCursor(0, 0);
   gfx_setTextColor(LCD_BLACK, LCD_WHITE);
   gfx_setTextSize(2);
-
+  
   while (1) {
+    // Draw the compass UI
+    draw_compass_UI(); 
+
+    // Logic getting the head angle (north)
+
+    // Draw the cardinal points acording to the nroth degree
+    draw_cardinal_points(45);
+
+
     
-    draw_compass_UI();
-
-    // gfx_drawChar(x, y, "N", LCD_YELLOW, LCD_BLACK, 2);
-    // North
-    gfx_drawChar(120 + (cos(degrees_to_radians(north_deg)) * 100),
-                 160 - (sin(degrees_to_radians(north_deg)) * 100), 78, LCD_GREEN, LCD_WHITE, 2);
-
-    // South
-    gfx_drawChar(120 + (cos(degrees_to_radians(south_deg)) * 100),
-                 160 - (sin(degrees_to_radians(south_deg)) * 100), 83, LCD_BLACK, LCD_WHITE, 2);
-
-    // East
-    gfx_drawChar(120 + (cos(degrees_to_radians(east_deg)) * 100),
-                 160 - (sin(degrees_to_radians(east_deg)) * 100), 69, LCD_BLACK, LCD_WHITE, 2);
-
-    // West
-    gfx_drawChar(120 + (cos(degrees_to_radians(west_deg)) * 100),
-                 160 - (sin(degrees_to_radians(west_deg)) * 100), 87, LCD_BLACK, LCD_WHITE, 2);
-
-
-    // Recalculating new positon for cardinals
-    north_deg = (north_deg + 3) % 360;
-    south_deg = (south_deg + 3) % 360;
-    east_deg = (east_deg + 3) % 360;
-    west_deg = (west_deg + 3) % 360;
-
-    //gfx_drawCircle(150, 290, 2, LCD_GREEN);
-    gfx_setCursor(95, 290);
-    gfx_setTextColor(LCD_GREEN, LCD_WHITE);
-    gfx_puts("360");
 
     lcd_show_frame();
   }

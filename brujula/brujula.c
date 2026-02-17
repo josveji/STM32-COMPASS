@@ -2,6 +2,7 @@
  * STM32F429 + QMC5883L
  * Brújula completa (hard-iron corregido)
  */
+//#include "brujula.h"
 
  #include <libopencm3/stm32/rcc.h>
  #include <libopencm3/stm32/gpio.h>
@@ -38,14 +39,14 @@ static const float ALPHA = 0.01f;  // 0<ALPHA<=1 (más pequeño = más suave)
  
  /* ================= DELAY ================= */
  
- static void delay(volatile uint32_t n)
+  void delay( uint32_t n)
  {
      while (n--) __asm__("nop");
  }
  
  /* ================= USB CDC ================= */
  
- static void system_init(void)
+  void system_init(void)
  {
      rcc_clock_setup_pll(
          &rcc_hse_8mhz_3v3[RCC_CLOCK_3V3_168MHZ]);
@@ -57,14 +58,14 @@ static const float ALPHA = 0.01f;  // 0<ALPHA<=1 (más pequeño = más suave)
      cdcacm_f429_init();
  }
  
- static void init_console(void)
+  void init_console(void)
  {
      setvbuf(stdout, NULL, _IONBF, 0);
  }
  
  /* ================= I2C SETUP ================= */
  
- static void i2c_setup(void)
+  void i2c_setup(void)
  {
      rcc_periph_clock_enable(RCC_GPIOB);
      rcc_periph_clock_enable(RCC_I2C1);
@@ -87,7 +88,7 @@ static const float ALPHA = 0.01f;  // 0<ALPHA<=1 (más pequeño = más suave)
  
  /* ================= I2C WRITE (timeout) ================= */
  
- static int i2c_write_reg_timeout(uint8_t addr, uint8_t reg, uint8_t val)
+  int i2c_write_reg_timeout(uint8_t addr, uint8_t reg, uint8_t val)
  {
      uint32_t t;
  
@@ -122,7 +123,7 @@ static const float ALPHA = 0.01f;  // 0<ALPHA<=1 (más pequeño = más suave)
  
  /* ================= I2C READ ================= */
  
- static uint8_t i2c_read_reg(uint8_t addr, uint8_t reg)
+  uint8_t i2c_read_reg(uint8_t addr, uint8_t reg)
  {
      uint8_t val = 0;
      i2c_transfer7(I2C1, addr, &reg, 1, &val, 1);
@@ -131,17 +132,17 @@ static const float ALPHA = 0.01f;  // 0<ALPHA<=1 (más pequeño = más suave)
  
  /* ================= QMC INIT ================= */
  
- static void qmc_init(void)
+  void qmc_init(void)
  {
-     printf("Esperando QMC power-up...\n\r");
+     //printf("Esperando QMC power-up...\n\r");
      delay(15000000);
  
-     printf("Reset QMC...\n\r");
+     //printf("Reset QMC...\n\r");
      while (i2c_write_reg_timeout(QMC_ADDR,
                                  QMC_REG_SETRESET, 0x01) != 0)
          delay(3000000);
  
-     printf("Config QMC...\n\r");
+     //printf("Config QMC...\n\r");
      /* OSR=128, RNG=2G, ODR=10Hz, Continuous */
      while (i2c_write_reg_timeout(QMC_ADDR,
                                   QMC_REG_CONTROL, 0x11) != 0)
@@ -150,7 +151,7 @@ static const float ALPHA = 0.01f;  // 0<ALPHA<=1 (más pequeño = más suave)
  
  /* ================= READ XYZ ================= */
  
- static void qmc_read_xyz(int16_t *x, int16_t *y, int16_t *z)
+  void qmc_read_xyz(int16_t *x, int16_t *y, int16_t *z)
  {
      uint8_t status;
  
@@ -171,6 +172,27 @@ static const float ALPHA = 0.01f;  // 0<ALPHA<=1 (más pequeño = más suave)
      *z = (int16_t)((zh << 8) | zl);
  }
  
+ float qmc_read_heading(void)
+{
+    int16_t x, y, z;
+
+    qmc_read_xyz(&x, &y, &z);
+
+    /* Hard-iron correction */
+    x -= OFF_X;
+    y -= OFF_Y;
+    z -= OFF_Z;
+
+    /* Filtro */
+    fx = fx + ALPHA * ((float)x - fx);
+    fz = fz + ALPHA * ((float)z - fz);
+
+    float heading = atan2f(fx, fz) * 180.0f / M_PI;
+    if (heading < 0) heading += 360.0f;
+
+    return heading;
+}
+
  /* ================= MAIN ================= */
  
  int main(void)
@@ -179,39 +201,13 @@ static const float ALPHA = 0.01f;  // 0<ALPHA<=1 (más pequeño = más suave)
      init_console();
      i2c_setup();
  
-     printf("\n\r=== BRUJULA QMC5883L ===\n\r");
- 
      qmc_init();
-     printf("Sensor listo\n\r");
  
      while (1) {
-         int16_t x, y, z;
-    
- 
-         qmc_read_xyz(&x, &y, &z);
- 
-         /* Hard-iron correction */
-         x -= OFF_X;
-         y -= OFF_Y;
-         z -= OFF_Z;
-
-         /* Filtro exponencial sobre X y Z */
-fx = fx + ALPHA * ((float)x - fx);
-fz = fz + ALPHA * ((float)z - fz);
-
-/* Heading usando X,Z filtrados */
-float heading = atan2f(fx, fz) * 180.0f / M_PI;
-if (heading < 0) heading += 360.0f;
-
- 
-         /* Heading (plano X-Z) */
-         heading = atan2((float)fx, (float)fz) * 180.0f / M_PI;
-         if (heading < 0) heading += 360.0f;
- 
-         printf("X=%d  Z=%d  Heading=%.2f°\n\r",
-                x, z, heading);
- 
+         float heading = qmc_read_heading();
+         printf("Heading = %.2f°\n\r", heading);
          delay(3000000);
      }
  }
+ 
  

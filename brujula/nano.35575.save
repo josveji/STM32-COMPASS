@@ -1,0 +1,48 @@
+#include <libopencm3/stm32/rcc.h>
+#include <libopencm3-plus/newlib/syscall.h>
+#include <libopencm3-plus/newlib/devices/cdcacm.h>
+#include <stdio.h>
+
+/* Inicialización del sistema y USB CDC */
+static void system_init(void)
+{
+    /* Reloj a 168 MHz (el mismo que ya venís usando) */
+    rcc_clock_setup_pll(&rcc_hse_8mhz_3v3[RCC_CLOCK_3V3_168MHZ]);
+
+    /* Redirigir stdin/stdout/stderr a USB CDC */
+    devoptab_list[0] = &dotab_cdcacm;
+    devoptab_list[1] = &dotab_cdcacm;
+    devoptab_list[2] = &dotab_cdcacm;
+
+    cdcacm_f429_init();
+}
+
+static void init_console(void)
+{
+    setvbuf(stdin,  NULL, _IONBF, 0);
+    setvbuf(stdout, NULL, _IONBF, 0);
+}
+
+static void delay(volatile uint32_t n)
+{
+    while (n--) {
+        __asm__("nop");
+    }
+}
+
+int main(void)
+{
+    system_init();
+    init_console();
+
+    // Esperar a que el USB se enumere y minicom esté listo
+    for (volatile int i = 0; i < 8000000; i++);
+
+    printf("\n\r=== TEST MINICOM OK ===\n\r");
+
+    int c = 0;
+    while (1) {
+        printf("Contador = %d\n\r", c++);
+        for (volatile int i = 0; i < 3000000; i++);
+    }
+}

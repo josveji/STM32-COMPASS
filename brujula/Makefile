@@ -1,10 +1,6 @@
 ##
-## This file is part of the STM32 Compass .
-## Copyright (C) 2025 Josue Jimenez <josvejimenezr@gmail.com> 
-##                   & Gabriel Vega <@gmail.com>
+## This file is part of the libopencm3 project.
 ##
-## Based on: 
-## libopencm3 
 ## Copyright (C) 2009 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This library is free software: you can redistribute it and/or modify
@@ -21,12 +17,17 @@
 ## along with this library.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
-BINARY = bussola
+BINARY = impresion
+
+SRCS = impresion.c brujula.c
 
 OOCD_INTERFACE = stlink-v2-1
 
 LDSCRIPT = ../../../../../libopencm3-plus/lib/libopencm3_plus_stm32f429idiscovery.ld
 
-LDLIBS		+= -lopencm3_plus_stm32f429idiscovery -lm
+LDLIBS += -lopencm3_plus_stm32f429idiscovery -lm
 
 include ../../Makefile.include
+
+
+
